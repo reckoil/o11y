@@ -1,18 +1,22 @@
 global:
   scrape_interval: 5s
+  evaluation_interval: 5s
+  external_labels:
+    site: prod
 
-#метрики ОС
 scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']
+
   - job_name: 'node-exporter'
     static_configs:
       - targets: ['node-exporter:9100']
 
-#метрики php-fpm
-  - job_name: 'php-fpm'
+  - job_name: 'php-fpm-exporter'
     static_configs:
       - targets: ['php-fpm-exporter:9253']
 
-#проверка CMS
   - job_name: 'blackbox-http'
     metrics_path: /probe
     params:
@@ -28,21 +32,26 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox:9115
 
-#проверка php-fpm
-  - job_name: 'blackbox-phpfpm'
+  - job_name: 'blackbox-php-fpm'
     metrics_path: /probe
     params:
       module: [phpfpm_status]
     static_configs:
       - targets:
-        - http://nginx:9001/fpm_status
+        - wordpress:9000
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
       - target_label: __address__
         replacement: blackbox:9115
 
-#метрики MySQL
   - job_name: 'mysql'
     static_configs:
       - targets: ['mysql-exporter:9104']
+
+remote_write:
+  - url: http://victoria-metrics:8428/api/v1/write
+    queue_config:
+      max_samples_per_send: 10000
+      capacity: 100000
+      max_shards: 10

@@ -1,3 +1,4 @@
+ДЗ #1:
 1. Установил Ubuntu Server 24.04, Docker, Docker Compose
 
 2. Составил docker-compose.yml-файл следующего содержания:
@@ -109,3 +110,33 @@ volumes:
 4. Установил и запустил через sudo docker-compose up -d контейнеры
 
 5. Через браузер проинициализировал установку Wordpress CMS
+
+ДЗ #2:
+1. Добавил в docker-compose.yml параметры развёртывания VictoriaMetrics:
+  victoria-metrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: victoria-metrics
+    ports:
+      - "8428:8428"
+    volumes:
+      - ./victoria-metrics_data:/var/lib/victoria-metrics
+    command:
+      - -retentionPeriod=2w
+      - -envflag.enable=true
+      - -selfScrapeInterval=10s
+      - -storageDataPath=/var/lib/victoria-metrics
+      - -httpListenAddr=:8428
+
+2. В prometheus.yml добавил подключение VictoriaMetrics:
+remote_write:
+  - url: http://victoria-metrics:8428/api/v1/write
+    queue_config:
+      max_samples_per_send: 10000
+      capacity: 100000
+      max_shards: 10
+
+а также добавил лейбл site: prod
+
+  external_labels:
+    site: prod
+
