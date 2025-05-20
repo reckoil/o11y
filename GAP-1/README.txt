@@ -113,6 +113,7 @@ volumes:
 
 ДЗ #2:
 1. Добавил в docker-compose.yml параметры развёртывания VictoriaMetrics:
+
   victoria-metrics:
     image: victoriametrics/victoria-metrics:latest
     container_name: victoria-metrics
@@ -128,6 +129,7 @@ volumes:
       - -httpListenAddr=:8428
 
 2. В prometheus.yml добавил подключение VictoriaMetrics:
+
 remote_write:
   - url: http://victoria-metrics:8428/api/v1/write
     queue_config:
@@ -139,4 +141,98 @@ remote_write:
 
   external_labels:
     site: prod
+
+ДЗ #3:
+1. Добавил в docker-compose.yml параметры развёртывания AlertManager:
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - /etc/docker/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+2. В prometheus.yml добавил подключение AlertManager:
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+3. В /etc/prometheus/alerts.yml создал примеры сообщений о высокой нагрузке процессора и недоступности nginx:
+
+groups:
+  - name: example-alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 80
+        for: 5m
+        labels:
+          severity: "warning"
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% for 5 minutes."
+
+      - alert: ServiceDown
+        expr: up{job="nginx"} == 0
+        for: 1m
+        labels:
+          severity: "critical"
+        annotations:
+          summary: "Service {{ $labels.instance }} is DOWN!"
+          description: "{{ $labels.job }} on {{ $labels.instance }} is not responding."
+
+4. Составил конфигурационный файл alertmanager.yml:
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: 'default-receiver'
+  routes:
+    - match:
+        severity: 'critical'
+      receiver: 'telegram-critical'
+    - match:
+        severity: 'warning'
+      receiver: 'email-warning'
+
+receivers:
+  - name: 'default-receiver'
+    email_configs:
+      - to: '<ЛОГИН>@yandex.ru'
+        from: '<ЛОГИН>@yandex.ru'
+        smarthost: 'smtp.yandex.ru:587'
+        auth_username: '<ЛОГИН>@yandex.ru'
+        auth_password: '<ПАРОЛЬ>'
+        require_tls: true
+
+  - name: 'telegram-critical'
+    telegram_configs:
+      - api_url: "https://api.telegram.org"
+        bot_token: "<ТОКЕН БОТА>"
+        chat_id: <ID КАНАЛА, КУДА НАДО ПРИСЛАТЬ СООБЩЕНИЯ>
+        parse_mode: "HTML"
+        message: "🔥 <b>CRITICAL ALERT</b> 🔥\n{{ .CommonAnnotations.summary }}\n{{ .CommonAnnotations.description }}"
+
+  - name: 'email-warning'
+    email_configs:
+      - to: '<ЛОГИН>@yandex.ru'
+        from: '<ЛОГИН>@yandex.ru'
+        smarthost: 'smtp.yandex.ru:587'
+        auth_username: '<ЛОГИН>@yandex.ru'
+        auth_password: '<ПАРОЛЬ>'
+        require_tls: true
 
