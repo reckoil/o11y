@@ -1,4 +1,4 @@
-ДЗ #5:
+ДЗ #6:
 1. Установил Ubuntu Server 24.04, Docker, Docker Compose
 
 2. Составил docker-compose.yml-файл следующего содержания:
