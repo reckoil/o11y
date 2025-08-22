@@ -1,0 +1,23 @@
+sources:
+  filebeat:
+    type: logstash
+    address: 0.0.0.0:5044
+
+sinks:
+  elasticsearch:
+    type: elasticsearch
+    inputs:
+      - filebeat
+    endpoints:
+      - https://192.168.64.138:9200
+    api_version: auto
+    bulk:
+      index: vector-logs
+    auth:
+      strategy: basic
+      user: elastic
+      password: vbTt-LPdnToMebesSP*K
+    tls:
+      ca_file: /etc/vector/certs/http_ca.crt
+      verify_certificate: true
+      verify_hostname: true
