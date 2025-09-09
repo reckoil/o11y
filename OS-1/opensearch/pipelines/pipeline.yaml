@@ -1,0 +1,18 @@
+log-pipeline:
+  source:
+    http:
+      ssl: false
+      port: 2021
+  processor:
+    - date:
+        from_time_received: true
+        destination: "@timestamp"
+  sink:
+    - opensearch:
+        hosts: ["http://192.168.64.138:9200"]
+        index: "logs"
+        username: "admin"
+        password: "V3ryStr0ngPwd123"
+        ssl: false
+        document_id: "${rand}"
+        action: "create"

@@ -1,0 +1,38 @@
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.19.3
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=false
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=V3ryStr0ngPwd123
+      - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+      - plugins.security.ssl.http.enabled=false
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.3
+    ports:
+      - "5601:5601"
+    environment:
+      - OPENSEARCH_HOSTS=http://192.168.64.138:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=V3ryStr0ngPwd123
+    depends_on:
+      - opensearch
+
+  data-prepper:
+    image: opensearchproject/data-prepper:2.4.0
+    ports:
+      - "2021:2021"
+    volumes:
+      - ./pipelines/pipeline.yaml:/usr/share/data-prepper/pipelines/pipeline.yaml
+      - ./config/data-prepper-config.yaml:/usr/share/data-prepper/config/data-prepper-config.yaml
+    command: ["/usr/share/data-prepper/bin/data-prepper"]
+    depends_on:
+      - opensearch
+
+volumes:
+  opensearch-data:
