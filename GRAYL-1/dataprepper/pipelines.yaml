@@ -1,0 +1,17 @@
+version: "2"
+log-pipeline:
+  source:
+    http:
+      port: 2021
+      ssl: false
+  processor:
+    - date:
+        from_time_received: true
+        destination: "@timestamp"
+  sink:
+    - opensearch:
+        hosts: ["http://opensearch:9200"]
+        index: "graylog_0"
+        ssl: false
+        insecure: true
+
